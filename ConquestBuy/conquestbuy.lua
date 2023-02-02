@@ -90,6 +90,7 @@ end)
 
 windower.register_event('incoming chunk',function(id,data,modified,injected,blocked)
     if id == 0x034 or id == 0x032 then
+        current_cp = data:unpack('I', 0x20+1)
         if purchase_queue and #purchase_queue > 0 then
             determine_interaction(purchase_queue[1])
             return true
