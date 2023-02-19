@@ -7,27 +7,35 @@ require('tables')
 require('logger')
 packets = require('packets')
 db = require('map')
---res_items = require('resources').items
+config = require('config')
 
 valid_conquest_zones = T{
     -- Bastok NPC's
-    [234] = {npc="Crying Wind, I.M.",   menu = 32761, item_name = "axe"}, -- Bastok Mines
-    [235] = {npc="Rabid Wolf, I.M.",    menu = 32761, item_name = "axe"}, -- Bastok Markets
-    [236] = {npc="Flying Axe, I.M.",    menu = 32761, item_name = "axe"}, -- Port Bastok
+    [234] = {npc='Crying Wind, I.M.',   menu = 32761, item_name = 'axe', short_name = 'Centurions Axe'}, -- Bastok Mines
+    [235] = {npc='Rabid Wolf, I.M.',    menu = 32761, item_name = 'axe', short_name = 'Centurions Axe'}, -- Bastok Markets
+    [236] = {npc='Flying Axe, I.M.',    menu = 32761, item_name = 'axe', short_name = 'Centurions Axe'}, -- Port Bastok
     -- Windy NPC's
-    [241] = {npc="Harara, W.W.",        menu = 32759, item_name = "scythe"}, -- Windurst Woods
-    [240] = {npc="Milma-Hapilma, W.W.", menu = 32759, item_name = "scythe"}, -- Port Windurst
-    [238] = {npc="Puroiko-Maiko, W.W.", menu = 32759, item_name = "scythe"}, -- Windurst Waters
+    [241] = {npc='Harara, W.W.',        menu = 32759, item_name = 'scythe', short_name = 'Mrc.Cpt. Scythe'}, -- Windurst Woods
+    [240] = {npc='Milma-Hapilma, W.W.', menu = 32759, item_name = 'scythe', short_name = 'Mrc.Cpt. Scythe'}, -- Port Windurst
+    [238] = {npc='Puroiko-Maiko, W.W.', menu = 32759, item_name = 'scythe', short_name = 'Mrc.Cpt. Scythe'}, -- Windurst Waters
     -- Sandy NPC's
-    [231] = {npc="Achantere, T.K.",     menu = 32762, item_name = "Halberd"}, -- Northern San d'Oria
-    [230] = {npc="Aravoge, T.K.",       menu = 32763, item_name = "Halberd"}, -- Southern San d'Oria
-    --[230] = {npc="Arpevion, T.K.",      menu = 32763, item_name = "Halberd"}, -- Southern San d'Oria (Note:cant have both npc's in the same zone)
+    [231] = {npc='Achantere, T.K.',     menu = 32762, item_name = 'halberd', short_name = 'Ryl.Sqr. Halberd'}, -- Northern San d'Oria
+    [230] = {npc='Aravoge, T.K.',       menu = 32763, item_name = 'halberd', short_name = 'Ryl.Sqr. Halberd'}, -- Southern San d'Oria
+    --[230] = {npc="Arpevion, T.K.",      menu = 32763, item_name = 'halberd', short_name = 'Ryl.Sqr. Halberd'}, -- Southern San d'Oria (Note:cant have both npc's in the same zone)
 }
+
+default = 
+{ 
+    conquestpoints = 0,
+    auto_sell = false,
+}
+settings = config.load(default)
 
 item = ''
 current_cp = 0
 purchase_queue = T{}
 col = {}
+sell_item = '.'
 
 windower.register_event('load', function()
     --not used yet
@@ -38,15 +46,35 @@ windower.register_event('addon command', function (command, ...)
     local args = T{...}
     local zone = windower.ffxi.get_info()['zone']
     item = valid_conquest_zones[zone].item_name
+    sell_item = valid_conquest_zones[zone].short_name
+
+    if command == 'autosell' then
+        settings.auto_sell = true
+        notice('Will now set the items purchased to SellNPC queue.')
+        settings:save()
+        return
+    end
     
     if command == 'buy' then
+        current_cp = settings.conquestpoints
+        if current_cp == 0 then
+            notice('Please click a gate guard NPC to set your current conquest points if you know you have more than 0.')
+            return
+        end
         notice('Buying 1 '..item..'.')
         purchase_queue[1] = build_item(item)
         return
     end
 
     if command == 'buyall' then
+        current_cp = settings.conquestpoints
         col = build_item(item)
+
+        if current_cp == 0 then
+            notice('Please click a gate guard NPC to set your current conquest points if you know you have more than 0.')
+            return
+        end
+
         local purchasable = math.floor(current_cp/col.Cost)
         
         if purchasable <= 0 then
@@ -57,9 +85,14 @@ windower.register_event('addon command', function (command, ...)
         if col then 
             local free_space = count_inv()
             local tobuy = 0
+
+            if free_space == 0 then
+                notice('You have no free spaces to purchase any items.')
+                return
+            end
             
             if purchasable > free_space then
-                notice("You have "..free_space.." free slots, buying "..item.. " until full.")
+                notice('You have '..free_space..' free slots, buying '..item.. ' until full.')
                 tobuy = free_space
             else
                 notice('Spending '..current_cp..' conquest points to purchase: '..purchasable..' '..item..'s.')
@@ -90,10 +123,17 @@ end)
 
 windower.register_event('incoming chunk',function(id,data,modified,injected,blocked)
     if id == 0x034 or id == 0x032 then
-        current_cp = data:unpack('I', 0x20+1)
-        if purchase_queue and #purchase_queue > 0 then
-            determine_interaction(purchase_queue[1])
-            return true
+        local zone = windower.ffxi.get_info()['zone']
+        target_id = data:unpack('I', 0x04+1)
+        if windower.ffxi.get_mob_by_id(target_id).name == valid_conquest_zones[zone].npc then
+            current_cp = data:unpack('I', 0x20+1)
+            settings.conquestpoints = current_cp
+            settings:save()
+            notice('Conquestpoints Updated, you have ' ..current_cp.. " conquest points.")
+            if purchase_queue and #purchase_queue > 0 then
+                determine_interaction(purchase_queue[1])
+                return true
+            end
         end
     end
 end)
@@ -121,6 +161,9 @@ function determine_interaction(obj)
     
     if #purchase_queue == 1 then
         notice('Buying Finished.')
+        if sell_item ~= '.' then
+            windower.send_command("input //sellnpc "..sell_item..";")
+        end
     end
     
     if index then
@@ -206,8 +249,8 @@ function fetch_db(item)
 end
 
 function get_cb_update()
-    local packet = packets.new('outgoing', 0x117, {["_unknown2"]=0})
-    packets.inject(packet)
+    --local packet = packets.new('outgoing', 0x117, {["_unknown2"]=0})
+    --packets.inject(packet)
 end
 
 function poke_npc(npc,target_index)
