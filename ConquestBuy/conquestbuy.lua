@@ -1,6 +1,6 @@
 _addon.name = 'conquestbuy'
 _addon.author = 'MrSent'
-_addon.version = '1.0.0.4'
+_addon.version = '1.0.1.2'
 _addon.command = 'cb'
 
 require('tables')
@@ -22,6 +22,11 @@ valid_conquest_zones = T{
     [231] = {npc='Achantere, T.K.',     menu = 32762, item_name = 'halberd', short_name = 'Ryl.Sqr. Halberd'}, -- Northern San d'Oria
     [230] = {npc='Aravoge, T.K.',       menu = 32763, item_name = 'halberd', short_name = 'Ryl.Sqr. Halberd'}, -- Southern San d'Oria
     --[230] = {npc="Arpevion, T.K.",      menu = 32763, item_name = 'halberd', short_name = 'Ryl.Sqr. Halberd'}, -- Southern San d'Oria (Note:cant have both npc's in the same zone)
+}
+
+cp_zones =
+{
+    230,231,234,235,236,238,240,241,
 }
 
 default = 
@@ -124,8 +129,18 @@ end)
 windower.register_event('incoming chunk',function(id,data,modified,injected,blocked)
     if id == 0x034 or id == 0x032 then
         local zone = windower.ffxi.get_info()['zone']
-        target_id = data:unpack('I', 0x04+1)
-        if windower.ffxi.get_mob_by_id(target_id).name == valid_conquest_zones[zone].npc then
+        local npc_id = data:unpack('I', 0x04+1)
+        local correct_zone = false
+
+        --print('Zone: ' ..zone.. ' NPC id: '..npc_id) -- debugging stuff
+
+        for i = 1, #cp_zones do
+            if zone == cp_zones[i] then
+                correct_zone = true
+            end
+        end
+        
+        if correct_zone and windower.ffxi.get_mob_by_id(npc_id).name == valid_conquest_zones[zone].npc then
             current_cp = data:unpack('I', 0x20+1)
             settings.conquestpoints = current_cp
             settings:save()
