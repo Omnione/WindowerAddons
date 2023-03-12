@@ -20,8 +20,8 @@ valid_conquest_zones = T{
     [238] = {npc='Puroiko-Maiko, W.W.', menu = 32759, item_name = 'scythe', short_name = 'Mrc.Cpt. Scythe'}, -- Windurst Waters
     -- Sandy NPC's
     [231] = {npc='Achantere, T.K.',     menu = 32762, item_name = 'halberd', short_name = 'Ryl.Sqr. Halberd'}, -- Northern San d'Oria
-    [230] = {npc='Aravoge, T.K.',       menu = 32763, item_name = 'halberd', short_name = 'Ryl.Sqr. Halberd'}, -- Southern San d'Oria
-    --[230] = {npc="Arpevion, T.K.",      menu = 32763, item_name = 'halberd', short_name = 'Ryl.Sqr. Halberd'}, -- Southern San d'Oria (Note:cant have both npc's in the same zone)
+    [230] = {npc='Aravoge, T.K.',       menu = 32762, item_name = 'halberd', short_name = 'Ryl.Sqr. Halberd'}, -- Southern San d'Oria
+    --[230] = {npc="Arpevion, T.K.",      menu = 32762, item_name = 'halberd', short_name = 'Ryl.Sqr. Halberd'}, -- Southern San d'Oria (Note:cant have both npc's in the same zone)
 }
 
 cp_zones =
